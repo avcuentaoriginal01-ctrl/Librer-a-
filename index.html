@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angwxr Reader Pro HD</title>
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#d4af37">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('Service Worker activo', reg))
+            .catch(err => console.log('Error en SW', err));
+        });
+      }
+    </script>
+</head>
+<body>
+    <aside id="library">
+        <div class="lib-title">Mi Estantería</div>
+        <input type="text" id="lib-search" placeholder="Buscar libro..." autocomplete="off">
+        <label for="pdf-upload" class="custom-file-upload">➕ Importar Libro</label>
+        <input type="file" id="pdf-upload" accept="application/pdf" style="display:none;">
+        <div id="books-list"></div>
+    </aside>
+
+    <main id="main-viewer">
+        <nav id="topbar">
+            <div class="btn-group">
+                <button id="prev-btn">⬅️</button>
+                <div class="page-box">
+                    <input type="number" id="page-input" min="1" value="1">
+                    <span id="page-total">/ 0</span>
+                </div>
+                <button id="next-btn">➡️</button>
+            </div>
+            
+            <div class="btn-group">
+                <button class="theme-btn" data-theme="sepia">📜</button>
+                <button class="theme-btn" data-theme="night">🌙</button>
+                <button class="theme-btn" data-theme="">☀️</button>
+            </div>
+            
+            <div class="btn-group">
+                <button id="full-btn">⛶</button>
+            </div>
+        </nav>
+
+        <div id="canvas-container">
+            <div id="empty-viewer">
+                <img src="descarga.jpg" alt="Mistic Eye" class="experimental-eye-free">
+                <span class="gold-text">Angwxr Reader Pro</span>
+                <div class="divider"></div>
+                <p class="viewer-msg">Selecciona un libro para comenzar la lectura</p>
+            </div>
+            <canvas id="pdf-render" style="display: none;"></canvas>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
+    <script src="app.js"></script>
+</body>
+</html>
