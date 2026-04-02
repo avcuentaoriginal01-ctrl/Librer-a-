@@ -106,3 +106,54 @@ canvas {
 /* TONALIDADES */
 canvas.sepia { filter: sepia(0.8) contrast(1.1) !important; }
 canvas.night { filter: invert(0.9) hue-rotate(180deg) !important; }
+/* --- AJUSTES PARA CELULAR --- */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column; /* Apila la estantería arriba y el visor abajo */
+    }
+
+    #library {
+        width: 100vw; /* Que ocupe todo el ancho */
+        height: auto;
+        max-height: 40vh; /* Que no tape toda la pantalla */
+        border-right: none;
+        border-bottom: 1px solid #222;
+        padding: 15px;
+    }
+
+    #main-viewer {
+        height: 60vh;
+        width: 100vw;
+        margin-left: 0 !important; /* Evita que se mueva de lado en móvil */
+    }
+
+    /* Ajustamos el texto de bienvenida para que quepa */
+    .gold-text {
+        font-size: 1.8rem;
+    }
+
+    .experimental-eye-free {
+        max-width: 150px;
+    }
+
+    /* El topbar lo hacemos un poco más pequeño para que no estorbe */
+    #topbar {
+        width: 90%;
+        gap: 10px;
+        padding: 8px 15px;
+        bottom: 15px;
+    }
+
+    .btn-group {
+        gap: 8px;
+    }
+
+    /* Ocultamos la estantería totalmente cuando se entra en modo lectura (hidden-ui) */
+    .hidden-ui #library {
+        display: none;
+    }
+    
+    .hidden-ui #main-viewer {
+        height: 100vh;
+    }
+}
