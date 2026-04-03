@@ -1,11 +1,11 @@
 let currentPage = 1, currentFileName = '', currentTheme = '', db, uiTimeout;
 
-// CONFIGURACIÓN DE BASE DE DATOS (INDEXEDDB)
+// --- CONFIGURACIÓN DE BASE DE DATOS (INDEXEDDB) ---
 const request = indexedDB.open("LibraryDB", 1);
 request.onupgradeneeded = e => e.target.result.createObjectStore("books", { keyPath: "name" });
 request.onsuccess = e => { db = e.target.result; updateLibraryUI(); };
 
-// ACTUALIZAR ESTANTERÍA (CON BOTÓN ELIMINAR X)
+// --- ACTUALIZAR ESTANTERÍA (CON BOTÓN ELIMINAR X) ---
 function updateLibraryUI() {
     if (!db) return;
     db.transaction("books", "readonly").objectStore("books").getAll().onsuccess = e => {
@@ -19,7 +19,7 @@ function updateLibraryUI() {
     };
 }
 
-// BUSCADOR DE LA ESTANTERÍA
+// --- BUSCADOR DE LA ESTANTERÍA ---
 document.getElementById('lib-search').oninput = (e) => {
     const term = e.target.value.toLowerCase().trim();
     document.querySelectorAll('.book-item').forEach(book => {
@@ -34,34 +34,40 @@ window.addEventListener('keydown', (e) => {
     if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") changePage(-1);
 });
 
-// CARGAR EL PDF EN EL VISOR
+// --- CARGAR EL PDF EN EL VISOR ---
 async function loadPDFBuffer(buffer, name) {
     currentFileName = name;
     window.pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
     currentPage = parseInt(localStorage.getItem(`read_${currentFileName}`)) || 1;
     
-    // Mostrar UI solo al cargar libro
     document.getElementById('topbar').style.display = 'flex';
     document.getElementById('empty-viewer').style.display = 'none';
     document.getElementById('pdf-render').style.display = 'block';
     
+    // En móvil, ocultamos la estantería automáticamente al cargar un libro
+    if (window.innerWidth <= 768) {
+        document.getElementById('library').classList.remove('show-mobile');
+    }
+    
     await renderPDFPage(currentPage);
 }
 
-// RENDERIZADO DE PÁGINA
+// --- RENDERIZADO DE PÁGINA ---
 async function renderPDFPage(num) {
     window.isRendering = true;
     const page = await window.pdfDoc.getPage(num);
     const canvas = document.getElementById('pdf-render');
     const ctx = canvas.getContext('2d');
-    const viewport = page.getViewport({ scale: 1.5 });
+    
+    // Escala dinámica para que quepa bien en móviles
+    const scale = window.innerWidth < 768 ? 1.0 : 1.5;
+    const viewport = page.getViewport({ scale: scale });
     
     canvas.height = viewport.height; 
     canvas.width = viewport.width;
     
     await page.render({ canvasContext: ctx, viewport: viewport }).promise;
     
-    // Re-aplicar tonalidad activa
     if (currentTheme) canvas.className = currentTheme;
     
     document.getElementById('page-input').value = num;
@@ -69,7 +75,7 @@ async function renderPDFPage(num) {
     window.isRendering = false;
 }
 
-// CAMBIO DE PÁGINA CON ANIMACIÓN NATURAL
+// --- CAMBIO DE PÁGINA CON ANIMACIÓN ---
 async function changePage(delta) {
     if (!window.pdfDoc || window.isRendering) return;
     if (currentPage + delta < 1 || currentPage + delta > window.pdfDoc.numPages) return;
@@ -85,24 +91,24 @@ async function changePage(delta) {
     }, 250);
 }
 
-// --- CAMBIO DE TONALIDADES ---
-document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.onclick = () => {
-        currentTheme = btn.getAttribute('data-theme');
-        const canvas = document.getElementById('pdf-render');
-        if (canvas) canvas.className = currentTheme;
-    };
-});
+// --- SOPORTE TOUCH (DESLIZAR PÁGINAS) ---
+let touchStartX = 0;
+const viewer = document.getElementById('main-viewer');
 
-// INPUT DE PÁGINA MANUAL
-document.getElementById('page-input').onchange = (e) => {
-    const val = parseInt(e.target.value);
-    if (window.pdfDoc && val >= 1 && val <= window.pdfDoc.numPages) {
-        currentPage = val; renderPDFPage(currentPage);
-    } else { e.target.value = currentPage; }
-};
+viewer.addEventListener('touchstart', e => {
+    touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
 
-// LÓGICA DE OCULTAR UI (HIDDEN-UI)
+viewer.addEventListener('touchend', e => {
+    let touchEndX = e.changedTouches[0].screenX;
+    let diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 70) { // Sensibilidad
+        if (diff > 0) changePage(1);  // Deslizar a la izquierda -> Siguiente
+        else changePage(-1);          // Deslizar a la derecha -> Anterior
+    }
+}, { passive: true });
+
+// --- GESTIÓN DE INTERFAZ (MOSTRAR/OCULTAR) ---
 function showUI() {
     document.body.classList.remove('hidden-ui');
     clearTimeout(uiTimeout);
@@ -113,7 +119,14 @@ function showUI() {
 window.addEventListener('mousemove', showUI);
 document.addEventListener('fullscreenchange', showUI);
 
-// BOTONES DE CONTROL INFERIOR
+// Doble toque en el visor para abrir/cerrar estantería en móvil
+viewer.addEventListener('dblclick', () => {
+    if (window.innerWidth <= 768) {
+        document.getElementById('library').classList.toggle('show-mobile');
+    }
+});
+
+// --- CONTROLES Y EVENTOS ---
 document.getElementById('full-btn').onclick = () => {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen();
     else document.exitFullscreen();
@@ -121,7 +134,21 @@ document.getElementById('full-btn').onclick = () => {
 document.getElementById('prev-btn').onclick = () => changePage(-1);
 document.getElementById('next-btn').onclick = () => changePage(1);
 
-// SUBIR NUEVO PDF
+document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.onclick = () => {
+        currentTheme = btn.getAttribute('data-theme');
+        const canvas = document.getElementById('pdf-render');
+        if (canvas) canvas.className = currentTheme;
+    };
+});
+
+document.getElementById('page-input').onchange = (e) => {
+    const val = parseInt(e.target.value);
+    if (window.pdfDoc && val >= 1 && val <= window.pdfDoc.numPages) {
+        currentPage = val; renderPDFPage(currentPage);
+    } else { e.target.value = currentPage; }
+};
+
 document.getElementById('pdf-upload').onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -134,16 +161,14 @@ document.getElementById('pdf-upload').onchange = (e) => {
     reader.readAsArrayBuffer(file);
 };
 
-// SELECCIONAR LIBRO DE LA LISTA
 function selectBook(name) {
     db.transaction("books", "readonly").objectStore("books").get(name).onsuccess = e => {
         if (e.target.result) loadPDFBuffer(e.target.result.data, name);
     };
 }
 
-// --- FUNCIÓN ELIMINAR LIBRO ---
 function deleteBook(event, name) {
-    event.stopPropagation(); // Evita que se abra el libro al hacer clic en la X
+    event.stopPropagation();
     if (confirm(`¿Eliminar "${name}"?`)) {
         db.transaction("books", "readwrite").objectStore("books").delete(name).onsuccess = () => {
             if (currentFileName === name) location.reload();
